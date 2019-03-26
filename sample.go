@@ -3,16 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"fmt"
+
 	"golang.org/x/crypto/openpgp"
 )
-
-// create gpg keys with
-// $ gpg --gen-key
-// ensure you correct paths and passphrase
 
 const prefix, passphrase = "/Users/szhang/go/src/codec/", "123"
 const secretKeyring = prefix + "private.asc"
@@ -109,63 +106,64 @@ func decTest(encString string) (string, error) {
 	return decStr, nil
 }
 
-func main() {
-	//encryption started
-	//read from plain file
-	plainSrc, err := os.Open("/Users/szhang/go/src/codec/plain.txt")
-	if err != nil{
-	  log.Fatal(err)
+func readFileToString(filePath string) (string, error) {
+	src, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal(err)
 	}
-	defer plainSrc.Close()
- 
-	buf1 := new(bytes.Buffer)
-	buf1.ReadFrom(plainSrc)
-	contents1 := buf1.String()
-	
-	//encrytpion
-	encStr, err := encTest(contents1)
+	defer src.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(src)
+	contents := buf.String()
+	return contents, nil
+}
+
+func writeStringToFile(str string, filePath string) {
+	f, err := os.Create(filePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//output encrypted file 
-    f1, err := os.Create("/Users/szhang/go/src/codec/encrypted.txt.gpg")
-    if err != nil {
-        log.Fatal(err)
-	}
-	
-	l1, err := f1.WriteString(encStr)	
-    if err != nil {
-		f1.Close()
+	l, err := f.WriteString(str)
+	if err != nil {
+		f.Close()
 		log.Fatal(err)
-    }
-	fmt.Println(l1, "encryption written successfully")		
+	}
+
+	fmt.Println(l, "written successfully")
+}
+
+func main() {
+	//encryption started
+	//read from plain file
+	plain, err := readFileToString("/Users/szhang/go/src/codec/plain.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//encrytpion
+	encStr, err := encTest(plain)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//output encrypted file
+	writeStringToFile(encStr, "/Users/szhang/go/src/codec/encrypted.txt.gpg")
 
 	//decryption started
 
 	//read encrypted file
-	filerc, err := os.Open("/Users/szhang/go/src/codec/encrypted.txt.gpg")
-	if err != nil{
-	  log.Fatal(err)
-	}
-	defer filerc.Close()
- 
-	buf2 := new(bytes.Buffer)
-	buf2.ReadFrom(filerc)
-	contents2 := buf2.String() 
+	encrypted, err := readFileToString("/Users/szhang/go/src/codec/encrypted.txt.gpg")
 
 	//dycryption
-	decStr, err := decTest(contents2)
+	decStr, err := decTest(encrypted)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	//output dycrypted file
-    f2, err := os.Create("/Users/szhang/go/src/codec/decrypted.txt")
-    if err != nil {
-        log.Fatal(err)
-	}	
-	f2.WriteString(decStr)	
+	writeStringToFile(decStr, "/Users/szhang/go/src/codec/decrypted.txt")
 
 	log.Println("Decrypted Secret:", decStr)
 }
