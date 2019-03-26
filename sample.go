@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-
+	"fmt"
 	"golang.org/x/crypto/openpgp"
 )
 
@@ -14,7 +14,6 @@ import (
 // $ gpg --gen-key
 // ensure you correct paths and passphrase
 
-const mySecretString = "this is so very secret!"
 const prefix, passphrase = "/Users/szhang/go/src/codec/", "123"
 const secretKeyring = prefix + "private.asc"
 const publicKeyring = prefix + "public.asc"
@@ -37,7 +36,7 @@ func encTest(secretString string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = w.Write([]byte(mySecretString))
+	_, err = w.Write([]byte(secretString))
 	if err != nil {
 		return "", err
 	}
@@ -111,14 +110,62 @@ func decTest(encString string) (string, error) {
 }
 
 func main() {
-	encStr, err := encTest(mySecretString)
+	//encryption started
+	//read from plain file
+	plainSrc, err := os.Open("/Users/szhang/go/src/codec/plain.txt")
+	if err != nil{
+	  log.Fatal(err)
+	}
+	defer plainSrc.Close()
+ 
+	buf1 := new(bytes.Buffer)
+	buf1.ReadFrom(plainSrc)
+	contents1 := buf1.String()
+	
+	//encrytpion
+	encStr, err := encTest(contents1)
 	if err != nil {
 		log.Fatal(err)
 	}
-	decStr, err := decTest(encStr)
+
+	//output encrypted file 
+    f1, err := os.Create("/Users/szhang/go/src/codec/encrypted.txt.gpg")
+    if err != nil {
+        log.Fatal(err)
+	}
+	
+	l1, err := f1.WriteString(encStr)	
+    if err != nil {
+		f1.Close()
+		log.Fatal(err)
+    }
+	fmt.Println(l1, "encryption written successfully")		
+
+	//decryption started
+
+	//read encrypted file
+	filerc, err := os.Open("/Users/szhang/go/src/codec/encrypted.txt.gpg")
+	if err != nil{
+	  log.Fatal(err)
+	}
+	defer filerc.Close()
+ 
+	buf2 := new(bytes.Buffer)
+	buf2.ReadFrom(filerc)
+	contents2 := buf2.String() 
+
+	//dycryption
+	decStr, err := decTest(contents2)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// should be done
+
+	//output dycrypted file
+    f2, err := os.Create("/Users/szhang/go/src/codec/decrypted.txt")
+    if err != nil {
+        log.Fatal(err)
+	}	
+	f2.WriteString(decStr)	
+
 	log.Println("Decrypted Secret:", decStr)
 }
