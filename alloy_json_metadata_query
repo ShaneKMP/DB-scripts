@@ -1,4 +1,4 @@
-with attributes (data_source, data_type, description, display_name, internal_name, name, selector, service_name, source_type, stage )
+with attributes (service_name, internal_name, source_type,	stage,	data_type,	description,	name,	display_name,	selector,	data_source)
    as ( VALUES
 ('Alloy Summary','Alloy Summary','asp','response','string','Alloy Summary','result','result','summary.result','raw'),
 ('Alloy Summary','Alloy Summary','asp','response','decimal','Alloy Summary','score','score','summary.score','raw'),
