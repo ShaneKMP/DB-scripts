@@ -311,7 +311,7 @@ with attributes (data_source, data_type, description, display_name, internal_nam
 ('Iovation','Iovation','dynamic','response','string','Iovation ipaddress','ipaddress','Iovation ipaddress','ipaddress','raw'),
 ('Iovation','Iovation','dynamic','response','string','Iovation mobile.system.simulator','mobile.system.simulator','Iovation mobile.system.simulator','mobile.system.simulator','raw'),
 ('Iovation','Iovation','dynamic','response','boolean','Suspect Device Data','suspect_device_data','Suspect Device Data','rules.suspect_device_data','raw'),
-('Iovation','Iovation','dynamic','response','boolean','location from the subscriber's IP Address does not match the location from the IP address detected by iovation','geolocation_mismatch','Geolocation Mismatch','rules.geolocation_mismatch','raw'),
+('Iovation','Iovation','dynamic','response','boolean','location from the subscriber IP Address does not match the location from the IP address detected by iovation','geolocation_mismatch','Geolocation Mismatch','rules.geolocation_mismatch','raw'),
 ('Iovation','Iovation','dynamic','response','boolean','iovation receives a 1st-party blackbox without a 3rd-party blackbox. Requires integration for both 1st and 3rd Party javascript device collection capabilities (Multi-Domain Recognition).','3rd_party_device_info_not_provided','3rd Party Device Information Not Provided','rules.3rd_party_device_info_not_provided','raw'),
 ('Iovation','Iovation','dynamic','response','string','Device blackbox age','device.bb.age','Device blackbox age','device.bb.age','raw'),
 ('Iovation','Iovation','dynamic','response','string','Flash installed','device.flash.installed','Flash installed','device.flash.installed','raw'),
