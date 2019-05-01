@@ -582,7 +582,7 @@ as ( VALUES
                     from attributes ) a
     where 1=1
  --      and updated_at::date >= now()::date - 1
- --     	and ev.id = 65000
+ --      	and ev.id = 65000
     ) 
     
     --select * from eval_services ;
@@ -599,26 +599,10 @@ as ( VALUES
            a.data_source,
            a.source_type
     FROM attributes a
-    WHERE a.display_name NOT LIKE '%Reason Codes%'
     )
     
-    --select * from  service_selector where field_name = 'ipaddress.loc.city'  ;
-
-    , reasoncode_selectors AS (
-    SELECT a.service_name,
-           a.selector,
-           replace(replace(replace(a.selector, '.', ', '), '[', ', '), ']', '') AS selector_path,
-           a.data_type,
-           a.display_name AS field_display_name,
-           a.name AS field_name,
-           a.description AS field_description,
-           a.data_source
-    FROM attributes a
-    WHERE (a.display_name LIKE '%Reason Codes%' OR a.display_name = 'Risk Codes')
-      AND a.data_source = 'formatted'
-    )
-    --select * from  reasoncode_selectors ;
-    
+    --select * from  service_selector;
+   
     , raw_eval_fields AS (
     SELECT es.evaluation_id,
            es.service_id,
@@ -638,7 +622,7 @@ as ( VALUES
     WHERE ss.data_source = 'raw'
     )
     
-    --select * from raw_eval_fields where field_name = 'ipaddress.loc.city';
+    --select * from raw_eval_fields ;
     
     , asp AS (
     SELECT es.evaluation_id,
@@ -676,9 +660,7 @@ as ( VALUES
     WHERE ss.data_source = 'formatted'
     )
     --select * from formatted_eval_fields;
-    
-
-    
+        
     , non_reasoncodes AS (
         SELECT *
         FROM formatted_eval_fields
@@ -689,18 +671,19 @@ as ( VALUES
         SELECT *
         FROM asp
     )
-    
+--    select * from non_reasoncodes;
     
     ,disambig_attrs AS (
     SELECT nrc.*,
            ROW_NUMBER () OVER (
-             PARTITION BY service_name || field_name
+             PARTITION BY service_name || field_display_name
              ORDER BY CASE WHEN extracted IS NOT NULL THEN 0 ELSE 1 END DESC
              ) AS rn
     FROM non_reasoncodes nrc
     --WHERE service_id IN (80)
     )
     
+--select * from disambig_attrs;
     , dedupe_attrs AS (
     SELECT evaluation_id,
            service_id,
@@ -715,56 +698,8 @@ as ( VALUES
     FROM disambig_attrs
     WHERE rn = 1
     )
-    
-    
-    , reasoncode_eval_fields AS (
-    SELECT es.evaluation_id,
-           es.service_id,
-           es.service_name,
-           rcs.field_name,
-           rcs.field_display_name,
-           (es.alloy_result #> format('{formatted_responses, %s, %s, %s}' :: text, es.service_name, rcs.selector_path, rcs.field_name) :: text []) :: json AS extracted,
-           rcs.field_description,
-           rcs.data_source,
-           rcs.data_type
-    FROM eval_services es
-           JOIN reasoncode_selectors rcs USING (service_name)
-    WHERE rcs.data_source = 'formatted'
-    )
-    
-   --select * from reasoncode_eval_fields;
-    , rc_long AS (
-    SELECT evaluation_id,
-           service_id,
-           service_name,
-           replace(json_array_elements(extracted) :: text, '"', '') :: text AS field_name,
-           data_source,
-           data_type,
-           'reasoncodes' :: text AS provenance
-    FROM reasoncode_eval_fields
-    )
-    
-    
-    , rc_descriptions AS (
-    SELECT DISTINCT rc_long.*
-    FROM rc_long
-    )
-    
-    
-    , rc_final AS (
-    SELECT evaluation_id,
-           service_id,
-           service_name,
-           field_name,
-           null::text AS field_display_name,
-           null::text AS extracted,
-           data_source,
-           data_type,
-           provenance
-    FROM rc_descriptions
-    )
-    
-    
+--select * from dedupe_attrs    ;
+ 
     , combined AS (
     SELECT evaluation_id,
            service_id,
@@ -777,35 +712,8 @@ as ( VALUES
            data_type,
            provenance
     FROM non_reasoncodes
-    --WHERE service_id NOT IN (80)
---       UNION ALL
--- raw AND formatted attributes that get run 2x, deduped
---       SELECT evaluation_id,
---            service_id,
---            service_name,
---            field_name,
---            field_display_name,
---            extracted,
---            field_description,
---            data_source,
---            data_type,
---            provenance
---       FROM dedupe_attrs
-      UNION ALL
-      --reasoncode descriptions long
-      SELECT evaluation_id,
-           service_id,
-           service_name,
-           field_name,
-           field_display_name,
-           extracted,
-           null as field_description,
-           data_source,
-           data_type,
-           provenance
-      FROM rc_final
     )
-
+--select * from combined;
 
 SELECT  evaluation_id,
        service_id,
@@ -820,153 +728,7 @@ SELECT  evaluation_id,
 FROM combined
        JOIN alloy_evaluations ev ON combined.evaluation_id = ev.id
 where 1=1
-    and service_name || '_' || field_display_name in (
-                                    'Alloy Summary_status_code',
-                                    'Alloy Summary_error',
-                                    'Alloy Summary_evaluation_token',
-                                    'Alloy Summary_entity_token',
-                                    'Alloy Summary_application_version_id',
-                                    'Alloy Summary_average_fraud_score',
-                                    'Alloy Summary_idis_idscore_raw_score',
-                                    'Alloy Summary_socure_raw_score',
-                                    'Alloy Summary_equifax_isrb_raw_score',
-                                    'Alloy Summary_score',
-                                    'Alloy Summary_tags',
-                                    'Alloy Summary_outcome',
-                                    'Alloy Summary_supplied_name_first',
-                                    'Alloy Summary_supplied_name_middle',
-                                    'Alloy Summary_supplied_name_last',
-                                    'Alloy Summary_supplied_birth_date',
-                                    'Alloy Summary_supplied_email_address',
-                                    'Alloy Summary_supplied_address_line_1',
-                                    'Alloy Summary_supplied_address_line_2',
-                                    'Alloy Summary_supplied_address_city',
-                                    'Alloy Summary_supplied_address_state',
-                                    'Alloy Summary_supplied_address_postal_code',
-                                    'Alloy Summary_supplied_address_country_code',
-                                    'Alloy Summary_supplied_phone_number',
-                                    'Alloy Summary_supplied_ip_address_v4',
-                                    'Alloy Summary_supplied_routing_number',
-                                    'Alloy Summary_supplied_method_of_linking_bank_account',
-                                    'Alloy Summary_formatted_name_first',
-                                    'Alloy Summary_formatted_name_middle',
-                                    'Alloy Summary_formatted_name_last',
-                                    'Alloy Summary_formatted_birth_date',
-                                    'Alloy Summary_formatted_email_address',
-                                    'Alloy Summary_formatted_address_line_1',
-                                    'Alloy Summary_formatted_address_line_2',
-                                    'Alloy Summary_formatted_address_city',
-                                    'Alloy Summary_formatted_address_state',
-                                    'Alloy Summary_formatted_address_postal_code',
-                                    'Alloy Summary_formatted_address_country_code',
-                                    'Alloy Summary_formatted_phone_number',
-                                    'Alloy Summary_formatted_ip_address_v4',
-                                    'Alloy Summary_formatted_routing_number',
-                                    'Alloy Summary_formatted_method_of_linking_bank_account',
-                                    'ID Analytics ID Network Attributes_Reason Codes',
-                                    'ID Analytics ID Network Attributes_Name Matched',
-                                    'ID Analytics ID Network Attributes_Address Matched',
-                                    'ID Analytics ID Network Attributes_SSN Matched',
-                                    'ID Analytics ID Network Attributes_DOB Matched',
-                                    'IDology ExpectID_Result Key',
-                                    'IDology ExpectID_Summary Result Key',
-                                    'Iovation_Iovation realipaddress',
-                                    'Iovation_Iovation realipaddress.isp',
-                                    'Iovation_Iovation realipaddress.loc.city',
-                                    'Iovation_Iovation realipaddress.loc.country',
-                                    'Iovation_Iovation realipaddress.org',
-                                    'Iovation_Iovation mlvalue1',
-                                    'Iovation_Iovation ipaddress',
-                                    'Iovation_Iovation ipaddress.isp',
-                                    'Iovation_Iovation ipaddress.loc.city',
-                                    'Iovation_Iovation ipaddress.loc.country',
-                                    'Iovation_Iovation ipaddress.org',
-                                    'Lexis Nexis Instant ID_Reverse Phone Lookup City',
-                                    'Lexis Nexis Instant ID_DOB Matched',
-                                    'Lexis Nexis Instant ID_SSN Matched',
-                                    'Lexis Nexis Instant ID_Reverse Phone Lookup Last Name',
-                                    'Lexis Nexis Instant ID_Verification: Full Name',
-                                    'Lexis Nexis Instant ID_Verification: Last Name + Addresss + SSN',
-                                    'Lexis Nexis Instant ID_Commercial Mail Receiving Flag',
-                                    'Lexis Nexis Instant ID_World Compliance: OFAC',
-                                    'Lexis Nexis Instant ID_Watch Lists matches',
-                                    'Lexis Nexis Instant ID_Verification: Last Name + Phone',
-                                    'Lexis Nexis Instant ID_Phone Matched',
-                                    'Lexis Nexis Instant ID_Reverse Phone Lookup State',
-                                    'Lexis Nexis Instant ID_Reverse Phone Lookup address postal code last5',
-                                    'Lexis Nexis Instant ID_Verification: Last Name + Address',
-                                    'Lexis Nexis Instant ID_Phone of name and address',
-                                    'Lexis Nexis Instant ID_World Compliance: PEP',
-                                    'Lexis Nexis Instant ID_Verification: DOB Day',
-                                    'Lexis Nexis Instant ID_Verification: First Name + SSN',
-                                    'Lexis Nexis Instant ID_Identity Theft Risk Score',
-                                    'Lexis Nexis Instant ID_Reverse Phone Lookup First Name',
-                                    'Lexis Nexis Instant ID_Verification: DOB Year',
-                                    'Lexis Nexis Instant ID_Is address a PO Box',
-                                    'Lexis Nexis Instant ID_Name Matched',
-                                    'Lexis Nexis Instant ID_Address Matched',
-                                    'Lexis Nexis Instant ID_Verification: DOB Month',
-                                    'Lexis Nexis Instant ID_Verification: Last Name + SSN',
-                                    'White Pages Pro_subscriber_name',
-                                    'White Pages Pro_subscriber_age_range',
-                                    'White Pages Pro_is_subscriber_deceased',
-                                    'White Pages Pro_Address Type',
-                                    'White Pages Pro_Email is Disposable',
-                                    'White Pages Pro_WPP: ip_address_checks.distance_from_address',
-                                    'White Pages Pro_WPP: ip_address_checks.distance_from_phone',
-                                    'White Pages Pro_WPP: ip_address_checks.connection_type',
-                                    'White Pages Pro_Phone Address Match',
-                                    'White Pages Pro_Address Is Commercial',
-                                    'White Pages Pro_Address Is Forwarder',
-                                    'White Pages Pro_Email is Auto-generated',
-                                    'White Pages Pro_Phone Is Commercial',
-                                    'White Pages Pro_Email Registered Name',
-                                    'White Pages Pro_Email Registered Owner Age Range',
-                                    'White Pages Pro_WPP: ip_address_checks.is_proxy',
-                                    'White Pages Pro_Line Type',
-                                    'White Pages Pro_Address Is Valid',
-                                    'White Pages Pro_Email First Seen Date',
-                                    'White Pages Pro_WPP: ip_address_checks.geolocation.postal_code',
-                                    'White Pages Pro_Email to Name Match',
-                                    'White Pages Pro_WPP: ip_address_checks.is_valid',
-                                    'White Pages Pro_Phone Is Valid',
-                                    'White Pages Pro_Carrier Name',
-                                    'White Pages Pro_Address Is Active',
-                                    'White Pages Pro_Email Address First Seen Days',
-                                    'White Pages Pro_WPP: ip_address_checks.geolocation.city_name',
-                                    'White Pages Pro_WPP: ip_address_checks.geolocation.subdivision',
-                                    'White Pages Pro_WPP: ip_address_checks.geolocation.country_name',
-                                    'White Pages Pro_Phone Name Match',
-                                    'White Pages Pro_Resident Name',
-                                    'White Pages Pro_resident_age_range',
-                                    'White Pages Pro_is_resident_deceased',
-                                    'White Pages Pro_Email diagnostics',
-                                    'White Pages Pro_WPP: email_address_checks.email_domain_creation_days',
-                                    'White Pages Pro_Phone Is Connected',
-                                    'White Pages Pro_Prepaid Check',
-                                    'White Pages Pro_Address Name Match',
-                                    'White Pages Pro_Email is Valid',
-                                    'White Pages Pro_WPP: email_address_checks.email_domain_creation_date',
-                                    'White Pages Pro_WPP: ip_address_checks.geolocation.country_name',
-                                    'Socure 30_reason_code',
-                                    'Socure 30_internationalPEP',
-                                    'Socure 30_domesticPEP',
-                                    'Socure 30_domesticOFAC',
-                                    'Socure 30_generic_fraud_score',
-                                    'Socure 30_name_matched',
-                                    'Socure 30_address_matched',
-                                    'Socure 30_dob_matched',
-                                    'Socure 30_phone_matched',
-                                    'Socure 30_ssn_matched',
-                                    'Socure 30_address_risk_score',
-                                    'Socure 30_email_risk_score',
-                                    'Socure 30_phone_risk_score',
-                                    'Socure 30_wachlist_matches',
-                                    'Equifax XML_isrb_score',
-                                    'Equifax XML_fico_score',
-                                    'Equifax XML_unavailable',
-                                    'Equifax XML_fraud_victim_indicator')  
---  and extracted is not null
+  and extracted is not null
 --   and service_name ilike '%Socure 30%'  
 --   and field_name = 'address_matched'
 --   and evaluation_id = 10
