@@ -43,7 +43,7 @@ create view rdl.alloy_evaluation_tags as (
     aea.array_value as tags
   from rdl.alloy_evaluations_flattened aef
   inner join rdl.alloy_evaluations_array aea on aef.evaluation_id = aea.evaluation_id
-                                            and aea.field_name = 'alloy summary_tags'   
+                                            and lower(aea.field_name) = 'alloy summary_tags'   
 );
 
 
@@ -150,7 +150,7 @@ create view rdl.alloy_socure_reason_codes as (
     aea.array_value as reason_code
   from rdl.alloy_evaluations_flattened f
   inner join rdl.alloy_evaluations_array aea on aea.evaluation_id = f.evaluation_id
-                                            and aea.field_name = 'socure 30_reason_code'   
+                                            and lower(aea.field_name) = 'socure 30_reason_code'   
 );
 
 
@@ -397,7 +397,7 @@ create view rdl.alloy_idanalytics_reason_codes as (
     aea.array_value as reason_code
   from rdl.alloy_evaluations_flattened f
   inner join rdl.alloy_evaluations_array aea on aea.evaluation_id = f.evaluation_id
-                                            and aea.field_name = 'id analytics id network attributes_reason codes'   
+                                            and lower(aea.field_name) = 'id analytics id network attributes_reason codes'   
 );
 
 
